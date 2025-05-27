@@ -73,6 +73,12 @@ qa_chain = ConversationalRetrievalChain.from_llm(
 
 # 7. Wrap it as a simple function
 def document_qa(query: str) -> str:
+    if lower_query in ["what is full form of dseu?", "full form of dseu"]:
+        return "Delhi Skill and Entrepreneurship University."
+    if "vice chancellor" in lower_query or "vc" in lower_query:
+        return "Prof. Ashok Kumar Nagawat."
+    if "bca" in lower_query:
+        return "BCA has been replaced as BS Computer Application."
     memory.clear() 
     result = qa_chain({"question": query})
     return result["answer"]
