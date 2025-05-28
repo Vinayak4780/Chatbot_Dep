@@ -16,7 +16,7 @@ vectorstore = FAISS.load_local(
     embeddings,
     allow_dangerous_deserialization=True
 )
-retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
+retriever = vectorstore.as_retriever(search_kwargs={"k": 7})
 
 # 3. Set up conversational memory (now telling it to save only "answer")
 memory = ConversationBufferMemory(
@@ -33,32 +33,41 @@ from langchain.prompts import PromptTemplate
 prompt = PromptTemplate(
     input_variables=["context", "question"],
     template="""
-You are a knowledgeable assistant. Follow these steps **in order**:
-
-1️⃣ **Hard overrides** (if any of these match, answer exactly and stop):
-
-- If the question (case-insensitive) is **“What is full form of dseu?”**, reply:
-  > Delhi Skill and Entrepreneurship University.
-
-- Else if the question contains **“vice chancellor”** or **“vc”**, reply:
-  > Prof. Ashok Kumar Nagawat.
-
-- Else if the question mentions **“bca”**, reply:
-  > BCA has been replaced as BS Computer Application.
-
-2️⃣ **Contextual lookup**  
-Otherwise, use _only_ the information in **Retrieved Context** below to answer.  
-If the answer isn’t there, say:
-> I’m sorry, I don’t have that information. Please contact the admissions office.
+You are a factual and context-aware assistant. You must follow these rules strictly:
 
 ---
 
-**Retrieved Context:**  
+1️⃣ **Hardcoded answers** — If the user's question matches one of these, reply exactly:
+
+- If the question (case-insensitive) is "what is the full form of dseu", answer:
+  → Delhi Skill and Entrepreneurship University.
+
+- If the question mentions "vice chancellor" or "vc", answer:
+  → Prof. Ashok Kumar Nagawat.
+
+- If the question includes "bca", answer:
+  → BCA has been replaced as BS Computer Application.
+
+---
+
+2️⃣ **Contextual Grounding Required**
+
+If none of the above rules apply:
+
+- Only answer **using the Retrieved Context** below.  
+- If the answer is **not clearly supported** by the context, respond with:  
+  → I’m sorry, I don’t have that information. Please contact the admissions office.
+
+Do not guess. Do not use outside knowledge. Be strict.
+
+---
+
+📚 *Retrieved Context:*  
 {context}
 
-**Question:** {question}
+❓ *User Question:* {question}
 
-**Answer:**
+💬 *Answer:*
 """
 )
 
@@ -73,12 +82,6 @@ qa_chain = ConversationalRetrievalChain.from_llm(
 
 # 7. Wrap it as a simple function
 def document_qa(query: str) -> str:
-    if lower_query in ["what is full form of dseu?", "full form of dseu"]:
-        return "Delhi Skill and Entrepreneurship University."
-    if "vice chancellor" in lower_query or "vc" in lower_query:
-        return "Prof. Ashok Kumar Nagawat."
-    if "bca" in lower_query:
-        return "BCA has been replaced as BS Computer Application."
     memory.clear() 
     result = qa_chain({"question": query})
     return result["answer"]
